@@ -1,66 +1,46 @@
-# Output settings
 Output demo.gif
-Set Shell zsh
-Set FontSize 18
-Set Width 1200
-Set Height 800
-Set Padding 40
+
+# Settings
+Set FontSize 14
+Set Width 800
+Set Height 600
+Set Padding 20
 Set WindowBar Colorful
-Set TypingSpeed 100ms
+Set TypingSpeed 50ms
 Set Theme "TokyoNight"
 
-# --- SETUP (Hidden) ---
+# Start fresh terminal
 Hide
-Type "mkdir -p demo_vhs"
+Type "cd /tmp"
 Enter
-Type "cd demo_vhs"
+Type "rm -rf depman_demo"
 Enter
-Type "echo 'requests==2.28.1' > requirements.txt"
+Type "mkdir depman_demo"
 Enter
-Type "echo 'flask==2.2.2' >> requirements.txt"
+Type "cd depman_demo"
 Enter
-Type "python3 -m venv .venv"
-Enter
-Type "../depman --help > /dev/null" # Ensure it's built
-Enter
-Type "clear"
+Type "echo '[project]' > pyproject.toml"
 Enter
 Show
 
-# --- DEMO ---
 # Start depman
-Type "../depman"
-Sleep 1s
+Type "/home/eslam/coding/projects/depman/depman"
 Enter
-Sleep 3s
 
-# Navigate installed packages
-Type "j"
-Sleep 500ms
-Type "j"
-Sleep 500ms
-Type "k"
-Sleep 1s
-
-# Search PyPI
-Type "/"
-Sleep 1s
-Type "httpx"
+# Wait for TUI to load
 Sleep 2s
-Enter
-Sleep 4s
 
-# Show Help
+# Try to see help
 Type "?"
-Sleep 3s
+Sleep 2s
 
 # Quit
 Type "q"
-Sleep 1s
+Sleep 500ms
 
-# --- CLEANUP (Hidden) ---
+# Cleanup
 Hide
-Type "cd .."
+Type "cd /tmp"
 Enter
-Type "rm -rf demo_vhs"
+Type "rm -rf depman_demo"
 Enter
