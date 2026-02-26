@@ -164,6 +164,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 - [ ] Virtual environment creation/deletion
 - [ ] Dependency tree visualization
 - [ ] Audit security vulnerabilities
+- [ ] Multi-language support (i18n) - Use system language or configure in `config.toml`
 
 ## License
 
