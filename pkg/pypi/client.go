@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math"
 	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/eslam/depman/pkg/log"
@@ -18,12 +18,18 @@ import (
 
 const maxDisplayVersions = MaxDisplayVersions
 
+// defaultHTTPClient is the shared HTTP client for all PyPI requests.
+// Using a single client enables connection pooling for better performance.
+var defaultHTTPClient = &http.Client{
+	Timeout: HTTPTimeout,
+}
 
 var retryStatuses = map[int]bool{
-	StatusInternalServerError:  true,
-	StatusBadGateway:           true,
-	StatusServiceUnavailable:   true,
-	StatusGatewayTimeout:       true,
+	StatusInternalServerError: true,
+	StatusBadGateway:          true,
+	StatusServiceUnavailable:  true,
+	StatusGatewayTimeout:      true,
+	StatusTooManyRequests:     true,
 }
 
 // HTTPClient wraps http.Client with retry support
@@ -31,12 +37,11 @@ type HTTPClient struct {
 	client *http.Client
 }
 
-// NewHTTPClient creates a new HTTP client with retry support
+// NewHTTPClient creates a new HTTP client with retry support.
+// It uses a shared HTTP client for connection pooling.
 func NewHTTPClient() *HTTPClient {
 	return &HTTPClient{
-		client: &http.Client{
-			Timeout: HTTPTimeout,
-		},
+		client: defaultHTTPClient, // Use shared client for connection pooling
 	}
 }
 
@@ -171,13 +176,8 @@ func (c *Client) GetPackageWithContext(ctx context.Context, name string) (*Searc
 		return nil, fmt.Errorf("pypi: fetch package: status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("pypi: read response: %w", err)
-	}
-
 	var pkg packageInfo
-	if err := json.Unmarshal(body, &pkg); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&pkg); err != nil {
 		return nil, fmt.Errorf("pypi: parse response: %w", err)
 	}
 
@@ -214,13 +214,8 @@ func (c *Client) GetPackageDetailWithContext(ctx context.Context, name string) (
 		return nil, fmt.Errorf("pypi: fetch package detail: status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("pypi: read response: %w", err)
-	}
-
 	var pkg packageInfo
-	if err := json.Unmarshal(body, &pkg); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&pkg); err != nil {
 		return nil, fmt.Errorf("pypi: parse response: %w", err)
 	}
 
@@ -276,13 +271,18 @@ func (c *Client) SearchWithContext(ctx context.Context, query string) ([]SearchR
 	var results []SearchResult
 	seen := make(map[string]bool)
 
-	// Try exact match first
+	// Try exact match first (sequential, as required)
 	if pkg, err := c.GetPackageWithContext(ctx, query); err == nil && pkg != nil {
 		results = append(results, *pkg)
 		seen[strings.ToLower(pkg.Name)] = true
 	}
 
-	// Try common variations
+	// If we already have enough results, return early
+	if len(results) >= MaxSearchResults {
+		return results, nil
+	}
+
+	// Try common variations in parallel
 	variations := []string{
 		"python-" + query,
 		"py" + query,
@@ -291,16 +291,45 @@ func (c *Client) SearchWithContext(ctx context.Context, query string) ([]SearchR
 		query + "-py",
 	}
 
+	// Filter out already seen variations
+	var pendingVariations []string
 	for _, v := range variations {
-		if seen[v] {
-			continue
+		if !seen[v] {
+			pendingVariations = append(pendingVariations, v)
 		}
-		if pkg, err := c.GetPackageWithContext(ctx, v); err == nil && pkg != nil {
-			name := strings.ToLower(pkg.Name)
-			if !seen[name] {
-				seen[name] = true
-				results = append(results, *pkg)
+	}
+
+	if len(pendingVariations) == 0 {
+		return results, nil
+	}
+
+	// Use buffered channel to collect results
+	resultChan := make(chan *SearchResult, len(pendingVariations))
+	var wg sync.WaitGroup
+
+	// Launch goroutines for each variation
+	for _, v := range pendingVariations {
+		wg.Add(1)
+		go func(name string) {
+			defer wg.Done()
+			if pkg, err := c.GetPackageWithContext(ctx, name); err == nil && pkg != nil {
+				resultChan <- pkg
 			}
+		}(v)
+	}
+
+	// Close channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// Collect results with early termination
+	for pkg := range resultChan {
+		name := strings.ToLower(pkg.Name)
+		if !seen[name] {
+			seen[name] = true
+			results = append(results, *pkg)
 		}
 		if len(results) >= MaxSearchResults {
 			break

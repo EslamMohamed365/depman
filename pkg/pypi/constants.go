@@ -51,6 +51,9 @@ const (
 
 	// StatusGatewayTimeout represents HTTP 504 Gateway Timeout
 	StatusGatewayTimeout = 504
+
+	// StatusTooManyRequests represents HTTP 429 Too Many Requests
+	StatusTooManyRequests = 429
 )
 
 // Search configuration constants

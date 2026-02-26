@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/eslam/depman/config"
 	"github.com/eslam/depman/pkg/pip"
@@ -128,7 +129,7 @@ func (d DashboardModel) Update(msg tea.Msg, state *AppState, runner *pip.Runner)
 			}
 			d.syncScroll(state)
 		case "ctrl+d":
-	half := d.viewableHeight() / HalfPageDivisor
+			half := d.viewableHeight() / HalfPageDivisor
 			if state.ActivePanel == PanelInstalled {
 				d.installedCursor = min(d.installedCursor+half, max(0, len(state.Installed)-1))
 			} else {
@@ -136,7 +137,7 @@ func (d DashboardModel) Update(msg tea.Msg, state *AppState, runner *pip.Runner)
 			}
 			d.syncScroll(state)
 		case "ctrl+u":
-	half := d.viewableHeight() / HalfPageDivisor
+			half := d.viewableHeight() / HalfPageDivisor
 			if state.ActivePanel == PanelInstalled {
 				d.installedCursor = max(d.installedCursor-half, 0)
 			} else {
@@ -218,16 +219,48 @@ func (d DashboardModel) handleConfirm(msg tea.KeyMsg, state *AppState, runner *p
 			}
 		case "update-all":
 			return d, func() tea.Msg {
+				var wg sync.WaitGroup
+				var mu sync.Mutex // Protect shared slices
 				var failed []string
 				succeeded := 0
+
+				// Create buffered channel to collect results
+				results := make(chan struct {
+					name string
+					err  error
+				}, len(outdated))
+
 				for _, p := range outdated {
-					result := runner.Upgrade(p.Name)
-					if result.Err != nil {
-						failed = append(failed, p.Name)
+					wg.Add(1)
+					go func(pkgName string) {
+						defer wg.Done()
+						result := runner.Upgrade(pkgName)
+						results <- struct {
+							name string
+							err  error
+						}{pkgName, result.Err}
+					}(p.Name)
+				}
+
+				// Wait for all goroutines and close channel
+				go func() {
+					wg.Wait()
+					close(results)
+				}()
+
+				// Collect results
+				for r := range results {
+					if r.err != nil {
+						mu.Lock()
+						failed = append(failed, r.name)
+						mu.Unlock()
 					} else {
+						mu.Lock()
 						succeeded++
+						mu.Unlock()
 					}
 				}
+
 				if len(failed) > 0 {
 					err := fmt.Errorf("packages: update failed: %s", strings.Join(failed, ", "))
 					msg := fmt.Sprintf("updated %d, failed %d", succeeded, len(failed))
@@ -520,8 +553,8 @@ func (d DashboardModel) selectedOutdated(state *AppState) *pip.Package {
 }
 
 func (d DashboardModel) pageSize() int {
-	if d.height > 6 {
-		return d.height - 6
+	if d.height > PageSizeOffset {
+		return d.height - PageSizeOffset
 	}
 	return DefaultPageSize
 }

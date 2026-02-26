@@ -84,7 +84,17 @@ const (
 
 	// DefaultPageSize is the default page size for scrolling when height is unknown
 	DefaultPageSize = 10
+
+	// PageSizeOffset is the number of lines subtracted from height for page size calculation
+	PageSizeOffset = 6
+
+	// ResultsDescOffset is the width offset for description truncation in search results
+	ResultsDescOffset = 10
+
+	// DetailDescOffset is the width offset for description truncation in package detail view
+	DetailDescOffset = 20
 )
+
 // File Permissions
 const (
 	// DefaultFilePermissions is the default permission for created files (0644)

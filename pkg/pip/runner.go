@@ -55,18 +55,36 @@ func (r *Runner) Run(bin string, args ...string) RunResult {
 
 // Install installs a package.
 func (r *Runner) Install(pkg string) RunResult {
+	// Validate package name before execution
+	if err := ValidatePackageSpec(pkg); err != nil {
+		log.Warn("package validation failed", "package", pkg, "error", err)
+		return RunResult{Err: fmt.Errorf("invalid package: %w", err)}
+	}
+
 	bin, args := r.Manager.InstallCmd(pkg)
 	return r.Run(bin, args...)
 }
 
 // Uninstall removes a package.
 func (r *Runner) Uninstall(pkg string) RunResult {
+	// Validate package name before execution
+	if err := ValidatePackageName(pkg); err != nil {
+		log.Warn("package validation failed", "package", pkg, "error", err)
+		return RunResult{Err: fmt.Errorf("invalid package: %w", err)}
+	}
+
 	bin, args := r.Manager.UninstallCmd(pkg)
 	return r.Run(bin, args...)
 }
 
 // Upgrade upgrades a package to its latest version.
 func (r *Runner) Upgrade(pkg string) RunResult {
+	// Validate package name before execution
+	if err := ValidatePackageName(pkg); err != nil {
+		log.Warn("package validation failed", "package", pkg, "error", err)
+		return RunResult{Err: fmt.Errorf("invalid package: %w", err)}
+	}
+
 	bin, args := r.Manager.UpgradeCmd(pkg)
 	return r.Run(bin, args...)
 }

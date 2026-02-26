@@ -2,6 +2,8 @@ package env
 
 import (
 	"os/exec"
+
+	"github.com/eslam/depman/pkg/log"
 )
 
 // ManagerType represents the package manager to use.
@@ -94,11 +96,14 @@ func DetectPackageManager(preferred string) PackageManager {
 			}
 			return PackageManager{Type: mgrType, BinPath: path}
 		}
+		// Log warning when preferred manager is not found
+		log.Warn("preferred package manager not found", "preferred", preferred)
 	}
 
 	// Auto-detect: uv and uvx first
 	for _, bin := range []string{"uv", "uvx"} {
 		if path, err := exec.LookPath(bin); err == nil {
+			log.Debug("auto-detected package manager", "manager", bin, "path", path)
 			return PackageManager{Type: ManagerUV, BinPath: path}
 		}
 	}

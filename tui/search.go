@@ -271,8 +271,8 @@ func (s SearchModel) viewResults(w, h int) string {
 			name := lipgloss.NewStyle().Foreground(config.ColorPurple).Bold(true).Render(r.Name)
 			ver := lipgloss.NewStyle().Foreground(config.ColorCyan).Render("v" + r.Version)
 
-			descMaxLen := w - 10
-		if descMaxLen < MinDescriptionLength {
+			descMaxLen := w - ResultsDescOffset
+			if descMaxLen < MinDescriptionLength {
 				descMaxLen = MinDescriptionLength
 			}
 			desc := dimStyle.Render(truncate(r.Description, descMaxLen))
@@ -303,7 +303,7 @@ func (s SearchModel) viewDetail(w, h int) string {
 	d := s.detail
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(config.ColorPurple)
-		labelStyle := lipgloss.NewStyle().Foreground(config.ColorFGDim).Width(KeyColumnWidth)
+	labelStyle := lipgloss.NewStyle().Foreground(config.ColorFGDim).Width(KeyColumnWidth)
 	valueStyle := lipgloss.NewStyle().Foreground(config.ColorFG)
 	verStyle := lipgloss.NewStyle().Foreground(config.ColorCyan)
 	dimStyle := lipgloss.NewStyle().Foreground(config.ColorFGDim)
@@ -319,7 +319,7 @@ func (s SearchModel) viewDetail(w, h int) string {
 
 	// Info fields
 	if d.Summary != "" {
-		descMaxLen := w - 20
+		descMaxLen := w - DetailDescOffset
 		if descMaxLen < MinDescWidth {
 			descMaxLen = MinDescWidth
 		}
