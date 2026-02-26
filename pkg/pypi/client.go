@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const maxDisplayVersions = 20
+
 // SearchResult represents a PyPI package from search.
 type SearchResult struct {
 	Name        string `json:"name"`
@@ -124,17 +126,22 @@ func (c *Client) GetPackageDetail(name string) (*PackageDetail, error) {
 	}
 
 	// Extract versions from releases map and sort newest-first
-	versions := make([]string, 0, len(pkg.Releases))
-	for v := range pkg.Releases {
-		// Skip pre-release versions (contain a, b, rc, dev, post)
-		if isStableVersion(v) {
-			versions = append(versions, v)
+	var versions []string
+	if pkg.Releases == nil {
+		versions = []string{}
+	} else {
+		versions = make([]string, 0, len(pkg.Releases))
+		for v := range pkg.Releases {
+			// Skip pre-release versions (contain a, b, rc, dev, post)
+			if isStableVersion(v) {
+				versions = append(versions, v)
+			}
 		}
 	}
 	sortVersionsDesc(versions)
 
 	// Keep max 20 versions
-	if len(versions) > 20 {
+	if len(versions) > maxDisplayVersions {
 		versions = versions[:20]
 	}
 
@@ -217,6 +224,10 @@ func sortVersionsDesc(versions []string) {
 }
 
 func compareVersions(a, b string) int {
+	// Strip 'v' prefix if present
+	a = strings.TrimPrefix(a, "v")
+	b = strings.TrimPrefix(b, "v")
+	
 	pa := strings.Split(a, ".")
 	pb := strings.Split(b, ".")
 	maxLen := len(pa)
@@ -226,9 +237,11 @@ func compareVersions(a, b string) int {
 	for i := 0; i < maxLen; i++ {
 		var na, nb int
 		if i < len(pa) {
+			// Non-numeric parts are treated as 0; error is ignored
 			na, _ = strconv.Atoi(pa[i])
 		}
 		if i < len(pb) {
+			// Non-numeric parts are treated as 0; error is ignored
 			nb, _ = strconv.Atoi(pb[i])
 		}
 		if na != nb {

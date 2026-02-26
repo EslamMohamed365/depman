@@ -15,7 +15,12 @@ import (
 // Execute is the main entrypoint called from main.go.
 func Execute() error {
 	// Load user config
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Using default configuration.\n")
+		cfg = config.DefaultConfig()
+	}
 
 	// Detect project dependency file
 	project := detector.DetectProject(".")

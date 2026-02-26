@@ -89,16 +89,18 @@ func DetectPackageManager(preferred string) PackageManager {
 	if preferred != "" {
 		if path, err := exec.LookPath(preferred); err == nil {
 			mgrType := ManagerPip
-			if preferred == "uv" {
+			if preferred == "uv" || preferred == "uvx" {
 				mgrType = ManagerUV
 			}
 			return PackageManager{Type: mgrType, BinPath: path}
 		}
 	}
 
-	// Auto-detect: uv first
-	if path, err := exec.LookPath("uv"); err == nil {
-		return PackageManager{Type: ManagerUV, BinPath: path}
+	// Auto-detect: uv and uvx first
+	for _, bin := range []string{"uv", "uvx"} {
+		if path, err := exec.LookPath(bin); err == nil {
+			return PackageManager{Type: ManagerUV, BinPath: path}
+		}
 	}
 
 	// Try pip

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"github.com/eslam/depman/config"
 	"github.com/eslam/depman/pkg/detector"
 	"github.com/eslam/depman/pkg/env"
@@ -252,9 +253,12 @@ func (m Model) loadPackages() tea.Cmd {
 		}
 
 		outdatedResult := runner.Outdated()
-		var outdated []pip.Package
-		if outdatedResult.Err == nil {
-			outdated, _ = pip.ParseOutdatedList(outdatedResult.Stdout)
+		if outdatedResult.Err != nil {
+			return PackagesLoadedMsg{Err: outdatedResult.Err}
+		}
+		outdated, err := pip.ParseOutdatedList(outdatedResult.Stdout)
+		if err != nil {
+			return PackagesLoadedMsg{Err: fmt.Errorf("parsing outdated list: %w", err)}
 		}
 
 		return PackagesLoadedMsg{Installed: installed, Outdated: outdated}

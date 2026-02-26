@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -57,20 +58,22 @@ func configPath() string {
 }
 
 // Load reads the config file if it exists, otherwise returns defaults.
-func Load() Config {
+func Load() (Config, error) {
 	cfg := DefaultConfig()
 
 	path := configPath()
 	if path == "" {
-		return cfg
+		return cfg, nil
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return cfg // file doesn't exist or is unreadable, use defaults
+		return cfg, nil // file doesn't exist or is unreadable, use defaults
 	}
 
-	_ = toml.Unmarshal(data, &cfg)
+	if err := toml.Unmarshal(data, &cfg); err != nil {
+		return cfg, fmt.Errorf("parsing config %s: %w", path, err)
+	}
 
 	// Apply defaults for empty values
 	if cfg.PyPI.Mirror == "" {
@@ -80,5 +83,5 @@ func Load() Config {
 		cfg.Theme.Name = "tokyo-night"
 	}
 
-	return cfg
+	return cfg, nil
 }

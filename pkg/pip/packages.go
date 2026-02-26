@@ -92,6 +92,9 @@ func ComputeDiff(current, latest string) config.DiffType {
 }
 
 func parseVersion(v string) []int {
+	// Strip "v" prefix if present
+	v = strings.TrimPrefix(v, "v")
+	
 	// Strip pre-release suffixes like "1.2.3rc1" → "1.2.3"
 	for i, c := range v {
 		if c != '.' && (c < '0' || c > '9') {
@@ -99,7 +102,7 @@ func parseVersion(v string) []int {
 			break
 		}
 	}
-
+	
 	parts := strings.Split(v, ".")
 	nums := make([]int, len(parts))
 	for i, p := range parts {
@@ -109,5 +112,11 @@ func parseVersion(v string) []int {
 		}
 		nums[i] = n
 	}
+	
+	// Pad to at least 3 parts for consistent comparison
+	for len(nums) < 3 {
+		nums = append(nums, 0)
+	}
+	
 	return nums
 }

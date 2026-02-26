@@ -218,13 +218,22 @@ func (d DashboardModel) handleConfirm(msg tea.KeyMsg, state *AppState, runner *p
 			}
 		case "update-all":
 			return d, func() tea.Msg {
+				var failed []string
+				succeeded := 0
 				for _, p := range outdated {
 					result := runner.Upgrade(p.Name)
 					if result.Err != nil {
-						return PackageActionMsg{Action: "update-all failed at", Package: p.Name, Err: result.Err}
+						failed = append(failed, p.Name)
+					} else {
+						succeeded++
 					}
 				}
-				return PackageActionMsg{Action: "updated all", Package: pkg}
+				if len(failed) > 0 {
+					err := fmt.Errorf("failed: %s", strings.Join(failed, ", "))
+					msg := fmt.Sprintf("updated %d, failed %d", succeeded, len(failed))
+					return PackageActionMsg{Action: msg, Package: "", Err: err}
+				}
+				return PackageActionMsg{Action: fmt.Sprintf("updated %d", succeeded), Package: ""}
 			}
 		}
 	case "n", "esc", "q":
