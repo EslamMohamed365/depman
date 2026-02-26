@@ -1,0 +1,31 @@
+# Binaries
+depman
+*.exe
+*.test
+*.out
+
+# Go
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env*
+
+# Python (test artifacts from depman usage)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OpenCode (tool artifacts)
+.agent/
+.sisyphus/
