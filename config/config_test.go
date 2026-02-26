@@ -104,7 +104,7 @@ name = "tokyo-night"`,
 				t.Errorf("PackageManager.Preferred = %q; want %q", cfg.PackageManager.Preferred, tt.expected.PackageManager.Preferred)
 			}
 			if cfg.PyPI.Mirror != tt.expected.PyPI.Mirror {
-				t.Errorf("PyPI.Mirror = %q", cfg.Pq; want %yPI.Mirror, tt.expected.PyPI.Mirror)
+			t.Errorf("PyPI.Mirror = %q; want %q", cfg.PyPI.Mirror, tt.expected.PyPI.Mirror)
 			}
 			if cfg.Theme.Name != tt.expected.Theme.Name {
 				t.Errorf("Theme.Name = %q; want %q", cfg.Theme.Name, tt.expected.Theme.Name)
