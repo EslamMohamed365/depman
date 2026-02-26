@@ -25,10 +25,10 @@ func (hm HelpModel) View(state AppState) string {
 	tw := state.Width
 	th := state.Height
 	if tw == 0 {
-		tw = 80
+		tw = DefaultWidth
 	}
 	if th == 0 {
-		th = 24
+		th = DefaultHeight
 	}
 
 	container := lipgloss.NewStyle().

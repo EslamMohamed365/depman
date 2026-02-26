@@ -16,25 +16,25 @@ func CreateVirtualenv(dir string) (Virtualenv, error) {
 	if uvPath, err := exec.LookPath("uv"); err == nil {
 		cmd := exec.Command(uvPath, "venv", venvPath)
 		cmd.Dir = dir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return Virtualenv{}, fmt.Errorf("uv venv failed: %s: %w", string(output), err)
+		if _, err := cmd.CombinedOutput(); err != nil {
+			return Virtualenv{}, fmt.Errorf("env: create venv with uv: %w", err)
 		}
 	} else {
 		// Fall back to python -m venv
 		pythonBin := findPython()
 		if pythonBin == "" {
-			return Virtualenv{}, fmt.Errorf("neither uv nor python found")
+			return Virtualenv{}, fmt.Errorf("env: no python interpreter found")
 		}
 		cmd := exec.Command(pythonBin, "-m", "venv", venvPath)
 		cmd.Dir = dir
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return Virtualenv{}, fmt.Errorf("python -m venv failed: %s: %w", string(output), err)
+		if _, err := cmd.CombinedOutput(); err != nil {
+			return Virtualenv{}, fmt.Errorf("env: create venv with python: %w", err)
 		}
 	}
 
 	pythonBin := filepath.Join(venvPath, "bin", "python")
 	if !fileExecutable(pythonBin) {
-		return Virtualenv{}, fmt.Errorf("created .venv but python binary not found at %s", pythonBin)
+		return Virtualenv{}, fmt.Errorf("env: python binary not found: %s", pythonBin)
 	}
 
 	return Virtualenv{
@@ -47,7 +47,7 @@ func CreateVirtualenv(dir string) (Virtualenv, error) {
 // RecreateVirtualenv removes and recreates the virtualenv.
 func RecreateVirtualenv(dir string, venvPath string) (Virtualenv, error) {
 	if err := os.RemoveAll(venvPath); err != nil {
-		return Virtualenv{}, fmt.Errorf("removing broken venv: %w", err)
+		return Virtualenv{}, fmt.Errorf("env: remove venv: %w", err)
 	}
 	return CreateVirtualenv(dir)
 }

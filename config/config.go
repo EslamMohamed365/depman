@@ -13,6 +13,7 @@ type Config struct {
 	PackageManager PackageManagerConfig `toml:"package_manager"`
 	PyPI           PyPIConfig           `toml:"pypi"`
 	Theme          ThemeConfig          `toml:"theme"`
+	LogLevel       string               `toml:"log_level"` // "debug" | "info" | "warn" | "error"
 }
 
 // PackageManagerConfig specifies the preferred package manager.
@@ -42,6 +43,7 @@ func DefaultConfig() Config {
 		Theme: ThemeConfig{
 			Name: "tokyo-night",
 		},
+		LogLevel: "info", // default log level
 	}
 }
 
@@ -72,7 +74,7 @@ func Load() (Config, error) {
 	}
 
 	if err := toml.Unmarshal(data, &cfg); err != nil {
-		return cfg, fmt.Errorf("parsing config %s: %w", path, err)
+		return cfg, fmt.Errorf("config: parse toml: %w", err)
 	}
 
 	// Apply defaults for empty values
@@ -82,6 +84,8 @@ func Load() (Config, error) {
 	if cfg.Theme.Name == "" {
 		cfg.Theme.Name = "tokyo-night"
 	}
-
+	if cfg.LogLevel == "" {
+		cfg.LogLevel = "info"
+	}
 	return cfg, nil
 }

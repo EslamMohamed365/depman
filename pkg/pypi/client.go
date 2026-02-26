@@ -1,17 +1,98 @@
 package pypi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/eslam/depman/pkg/log"
 )
 
-const maxDisplayVersions = 20
+const maxDisplayVersions = MaxDisplayVersions
+
+
+var retryStatuses = map[int]bool{
+	StatusInternalServerError:  true,
+	StatusBadGateway:           true,
+	StatusServiceUnavailable:   true,
+	StatusGatewayTimeout:       true,
+}
+
+// HTTPClient wraps http.Client with retry support
+type HTTPClient struct {
+	client *http.Client
+}
+
+// NewHTTPClient creates a new HTTP client with retry support
+func NewHTTPClient() *HTTPClient {
+	return &HTTPClient{
+		client: &http.Client{
+			Timeout: HTTPTimeout,
+		},
+	}
+}
+
+// DoWithRetry performs an HTTP request with retry logic
+func (c *HTTPClient) DoWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {
+	var lastErr error
+	for attempt := 0; attempt <= MaxRetries; attempt++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		if attempt > 0 {
+			backoff := float64(RetryDelay) * math.Pow(BackoffMultiplier, float64(attempt-1))
+			sleepDuration := time.Duration(int(backoff)) * time.Millisecond
+			log.Info("retrying pypi request", "attempt", attempt+1, "backoff_ms", sleepDuration.Milliseconds(), "url", req.URL.String())
+			timer := time.NewTimer(sleepDuration)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return nil, ctx.Err()
+			case <-timer.C:
+			}
+		}
+
+		resp, err := c.client.Do(req)
+		if err != nil {
+			lastErr = err
+			log.Warn("pypi request failed", "error", err, "url", req.URL.String())
+			continue
+		}
+
+		log.Info("pypi response received", "status", resp.StatusCode, "url", req.URL.String())
+
+		if respOK(resp.StatusCode) {
+			return resp, nil
+		}
+
+		if !retryStatuses[resp.StatusCode] {
+			log.Warn("pypi non-retryable error", "status", resp.StatusCode, "url", req.URL.String())
+			return resp, nil
+		}
+
+		resp.Body.Close()
+		lastErr = fmt.Errorf("pypi: server error: %d", resp.StatusCode)
+		log.Warn("pypi retryable error", "status", resp.StatusCode, "url", req.URL.String())
+	}
+
+	log.Error("pypi request exhausted retries", "error", lastErr, "url", req.URL.String())
+	return nil, lastErr
+}
+
+func respOK(status int) bool {
+	return status >= StatusOKMin && status < StatusOKMax
+}
 
 // SearchResult represents a PyPI package from search.
 type SearchResult struct {
@@ -50,7 +131,7 @@ type packageInfo struct {
 // Client is a PyPI API client.
 type Client struct {
 	BaseURL    string
-	httpClient *http.Client
+	httpClient *HTTPClient
 }
 
 // NewClient creates a new PyPI client.
@@ -59,37 +140,45 @@ func NewClient(baseURL string) *Client {
 		baseURL = "https://pypi.org"
 	}
 	return &Client{
-		BaseURL: strings.TrimRight(baseURL, "/"),
-		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
+		BaseURL:    strings.TrimRight(baseURL, "/"),
+		httpClient: NewHTTPClient(),
 	}
 }
 
 // GetPackage fetches info for a single package from PyPI.
 func (c *Client) GetPackage(name string) (*SearchResult, error) {
+	return c.GetPackageWithContext(context.Background(), name)
+}
+
+// GetPackageWithContext fetches info for a single package with context support.
+func (c *Client) GetPackageWithContext(ctx context.Context, name string) (*SearchResult, error) {
 	url := fmt.Sprintf("%s/pypi/%s/json", c.BaseURL, name)
-	resp, err := c.httpClient.Get(url)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("fetching %s: %w", name, err)
+		return nil, fmt.Errorf("pypi: create request: %w", err)
+	}
+	resp, err := c.httpClient.DoWithRetry(ctx, req)
+	if err != nil {
+		log.Error("failed to fetch package from pypi", "package", name, "error", err)
+		return nil, fmt.Errorf("pypi: fetch package: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == StatusNotFound {
 		return nil, nil
 	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("PyPI returned status %d for %s", resp.StatusCode, name)
+	if resp.StatusCode != StatusOK {
+		return nil, fmt.Errorf("pypi: fetch package: status %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("reading response for %s: %w", name, err)
+		return nil, fmt.Errorf("pypi: read response: %w", err)
 	}
 
 	var pkg packageInfo
 	if err := json.Unmarshal(body, &pkg); err != nil {
-		return nil, fmt.Errorf("parsing response for %s: %w", name, err)
+		return nil, fmt.Errorf("pypi: parse response: %w", err)
 	}
 
 	return &SearchResult{
@@ -101,28 +190,38 @@ func (c *Client) GetPackage(name string) (*SearchResult, error) {
 
 // GetPackageDetail fetches full details including all available versions.
 func (c *Client) GetPackageDetail(name string) (*PackageDetail, error) {
+	return c.GetPackageDetailWithContext(context.Background(), name)
+}
+
+// GetPackageDetailWithContext fetches full details with context support.
+func (c *Client) GetPackageDetailWithContext(ctx context.Context, name string) (*PackageDetail, error) {
 	url := fmt.Sprintf("%s/pypi/%s/json", c.BaseURL, name)
-	resp, err := c.httpClient.Get(url)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("fetching %s: %w", name, err)
+		return nil, fmt.Errorf("pypi: create request: %w", err)
+	}
+	resp, err := c.httpClient.DoWithRetry(ctx, req)
+	if err != nil {
+		log.Error("failed to fetch package detail from pypi", "package", name, "error", err)
+		return nil, fmt.Errorf("pypi: fetch package detail: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == StatusNotFound {
 		return nil, nil
 	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("PyPI returned status %d for %s", resp.StatusCode, name)
+	if resp.StatusCode != StatusOK {
+		return nil, fmt.Errorf("pypi: fetch package detail: status %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("reading response: %w", err)
+		return nil, fmt.Errorf("pypi: read response: %w", err)
 	}
 
 	var pkg packageInfo
 	if err := json.Unmarshal(body, &pkg); err != nil {
-		return nil, fmt.Errorf("parsing response: %w", err)
+		return nil, fmt.Errorf("pypi: parse response: %w", err)
 	}
 
 	// Extract versions from releases map and sort newest-first
@@ -142,12 +241,12 @@ func (c *Client) GetPackageDetail(name string) (*PackageDetail, error) {
 
 	// Keep max 20 versions
 	if len(versions) > maxDisplayVersions {
-		versions = versions[:20]
+		versions = versions[:MaxDisplayVersions]
 	}
 
 	license := pkg.Info.License
-	if len(license) > 40 {
-		license = license[:40] + "…"
+	if len(license) > MaxLicenseLength {
+		license = license[:MaxLicenseLength] + "…"
 	}
 
 	return &PackageDetail{
@@ -164,6 +263,11 @@ func (c *Client) GetPackageDetail(name string) (*PackageDetail, error) {
 
 // Search queries PyPI for packages matching the given query.
 func (c *Client) Search(query string) ([]SearchResult, error) {
+	return c.SearchWithContext(context.Background(), query)
+}
+
+// SearchWithContext searches with context support.
+func (c *Client) SearchWithContext(ctx context.Context, query string) ([]SearchResult, error) {
 	query = strings.TrimSpace(strings.ToLower(query))
 	if query == "" {
 		return nil, nil
@@ -173,7 +277,7 @@ func (c *Client) Search(query string) ([]SearchResult, error) {
 	seen := make(map[string]bool)
 
 	// Try exact match first
-	if pkg, err := c.GetPackage(query); err == nil && pkg != nil {
+	if pkg, err := c.GetPackageWithContext(ctx, query); err == nil && pkg != nil {
 		results = append(results, *pkg)
 		seen[strings.ToLower(pkg.Name)] = true
 	}
@@ -191,14 +295,14 @@ func (c *Client) Search(query string) ([]SearchResult, error) {
 		if seen[v] {
 			continue
 		}
-		if pkg, err := c.GetPackage(v); err == nil && pkg != nil {
+		if pkg, err := c.GetPackageWithContext(ctx, v); err == nil && pkg != nil {
 			name := strings.ToLower(pkg.Name)
 			if !seen[name] {
 				seen[name] = true
 				results = append(results, *pkg)
 			}
 		}
-		if len(results) >= 10 {
+		if len(results) >= MaxSearchResults {
 			break
 		}
 	}
@@ -206,10 +310,24 @@ func (c *Client) Search(query string) ([]SearchResult, error) {
 	return results, nil
 }
 
+// isStableVersion checks if a version string represents a stable release.
+// Uses regex to match pre-release markers at appropriate positions.
+var preReleasePattern = regexp.MustCompile(`(^|[.\-_\d])(a|alpha|b|beta|rc|dev|post)(\d|$|[.\-_])`)
+
 func isStableVersion(v string) bool {
+	// First check for obvious pre-release patterns
 	lower := strings.ToLower(v)
-	for _, pre := range []string{"a", "b", "rc", "dev", "alpha", "beta", "post"} {
+	for _, pre := range []string{"rc", "dev", "alpha", "beta", "post"} {
 		if strings.Contains(lower, pre) {
+			// Check if it's a proper pre-release marker (not just a word containing it)
+			if preReleasePattern.MatchString(lower) {
+				return false
+			}
+		}
+	}
+	// Check single letter pre-release markers with boundary
+	if strings.Contains(lower, "a") || strings.Contains(lower, "b") {
+		if preReleasePattern.MatchString(lower) {
 			return false
 		}
 	}
@@ -227,7 +345,7 @@ func compareVersions(a, b string) int {
 	// Strip 'v' prefix if present
 	a = strings.TrimPrefix(a, "v")
 	b = strings.TrimPrefix(b, "v")
-	
+
 	pa := strings.Split(a, ".")
 	pb := strings.Split(b, ".")
 	maxLen := len(pa)
@@ -237,11 +355,9 @@ func compareVersions(a, b string) int {
 	for i := 0; i < maxLen; i++ {
 		var na, nb int
 		if i < len(pa) {
-			// Non-numeric parts are treated as 0; error is ignored
 			na, _ = strconv.Atoi(pa[i])
 		}
 		if i < len(pb) {
-			// Non-numeric parts are treated as 0; error is ignored
 			nb, _ = strconv.Atoi(pb[i])
 		}
 		if na != nb {

@@ -30,12 +30,12 @@ func WriteDependencyFile(project detector.Project, packages []pip.Package) error
 		// Read existing file to preserve non-dependency sections
 		existing, err := os.ReadFile(project.FilePath)
 		if err != nil {
-			return fmt.Errorf("reading %s: %w", project.FilePath, err)
+			return fmt.Errorf("parser: read file: %w", err)
 		}
 		content = RewritePyprojectDependencies(string(existing), deps)
 
 	default:
-		return fmt.Errorf("unknown file type: %v", project.FileType)
+		return fmt.Errorf("parser: write file: unknown file type %v", project.FileType)
 	}
 
 	return atomicWrite(project.FilePath, []byte(content))
@@ -46,7 +46,7 @@ func atomicWrite(target string, content []byte) error {
 	dir := filepath.Dir(target)
 	tmp, err := os.CreateTemp(dir, ".depman-*")
 	if err != nil {
-		return fmt.Errorf("creating temp file: %w", err)
+		return fmt.Errorf("parser: create temp file: %w", err)
 	}
 	tmpPath := tmp.Name()
 
@@ -59,10 +59,10 @@ func atomicWrite(target string, content []byte) error {
 
 	if _, err = tmp.Write(content); err != nil {
 		tmp.Close()
-		return fmt.Errorf("writing temp file: %w", err)
+		return fmt.Errorf("parser: write temp file: %w", err)
 	}
 	if err = tmp.Close(); err != nil {
-		return fmt.Errorf("closing temp file: %w", err)
+		return fmt.Errorf("parser: close temp file: %w", err)
 	}
 
 	// Preserve original file permissions
@@ -71,7 +71,7 @@ func atomicWrite(target string, content []byte) error {
 	}
 
 	if err = os.Rename(tmpPath, target); err != nil {
-		return fmt.Errorf("renaming temp file to %s: %w", target, err)
+		return fmt.Errorf("parser: rename file: %w", err)
 	}
 
 	return nil

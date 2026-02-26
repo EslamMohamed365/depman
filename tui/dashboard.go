@@ -51,9 +51,9 @@ func (d *DashboardModel) SetSize(w, h int) {
 // viewableHeight returns the number of package lines visible in a panel.
 func (d DashboardModel) viewableHeight() int {
 	// panel height minus border(2) minus title(1) minus blank(1) minus padding
-	h := d.height - 4 - 4
-	if h < 3 {
-		h = 3
+	h := d.height - DashboardReservedLines - DashboardPaddingLines
+	if h < MinPanelHeight {
+		h = MinPanelHeight
 	}
 	return h
 }
@@ -128,7 +128,7 @@ func (d DashboardModel) Update(msg tea.Msg, state *AppState, runner *pip.Runner)
 			}
 			d.syncScroll(state)
 		case "ctrl+d":
-			half := d.viewableHeight() / 2
+	half := d.viewableHeight() / HalfPageDivisor
 			if state.ActivePanel == PanelInstalled {
 				d.installedCursor = min(d.installedCursor+half, max(0, len(state.Installed)-1))
 			} else {
@@ -136,7 +136,7 @@ func (d DashboardModel) Update(msg tea.Msg, state *AppState, runner *pip.Runner)
 			}
 			d.syncScroll(state)
 		case "ctrl+u":
-			half := d.viewableHeight() / 2
+	half := d.viewableHeight() / HalfPageDivisor
 			if state.ActivePanel == PanelInstalled {
 				d.installedCursor = max(d.installedCursor-half, 0)
 			} else {
@@ -229,7 +229,7 @@ func (d DashboardModel) handleConfirm(msg tea.KeyMsg, state *AppState, runner *p
 					}
 				}
 				if len(failed) > 0 {
-					err := fmt.Errorf("failed: %s", strings.Join(failed, ", "))
+					err := fmt.Errorf("packages: update failed: %s", strings.Join(failed, ", "))
 					msg := fmt.Sprintf("updated %d, failed %d", succeeded, len(failed))
 					return PackageActionMsg{Action: msg, Package: "", Err: err}
 				}
@@ -288,15 +288,14 @@ func (d DashboardModel) View(state AppState) string {
 	if d.showConfirm || d.addMode {
 		overlayLines = 1
 	}
-	statusBarLines := 1
 
-	panelHeight := h - statusBarLines - overlayLines - 2 // 2 for border top/bottom
-	if panelHeight < 5 {
-		panelHeight = 5
+	panelHeight := h - StatusBarLines - overlayLines - PanelBorderLines
+	if panelHeight < MinPanelHeight {
+		panelHeight = MinPanelHeight
 	}
 
 	panelWidth := w/2 - 1
-	if panelWidth < 20 {
+	if panelWidth < MinPanelWidth {
 		panelWidth = w - 2
 	}
 
@@ -524,5 +523,5 @@ func (d DashboardModel) pageSize() int {
 	if d.height > 6 {
 		return d.height - 6
 	}
-	return 10
+	return DefaultPageSize
 }

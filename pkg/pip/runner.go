@@ -6,8 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/eslam/depman/pkg/env"
+	"github.com/eslam/depman/pkg/log"
 )
 
 // Runner executes pip/uv commands scoped to a specific environment.
@@ -30,6 +32,7 @@ type RunResult struct {
 
 // Run executes a pip/uv command with the resolved environment.
 func (r *Runner) Run(bin string, args ...string) RunResult {
+	log.Info("executing package manager command", "bin", bin, "args", strings.Join(args, " "))
 	cmd := exec.Command(bin, args...)
 	cmd.Env = r.buildEnv()
 
@@ -38,6 +41,11 @@ func (r *Runner) Run(bin string, args ...string) RunResult {
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
+	if err != nil {
+		log.Warn("package manager command failed", "bin", bin, "error", err, "stderr", stderr.String())
+	} else {
+		log.Info("package manager command succeeded", "bin", bin)
+	}
 	return RunResult{
 		Stdout: stdout.String(),
 		Stderr: stderr.String(),

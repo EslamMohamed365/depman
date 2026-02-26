@@ -1,0 +1,18 @@
+# Depman Configuration File
+# Located at: ~/.config/depman/config.toml
+
+[package_manager]
+# Preferred package manager: "uv" or "pip" (default: auto-detect)
+preferred = "uv"
+
+[pypi]
+# PyPI mirror URL (default: https://pypi.org)
+mirror = "https://pypi.org"
+
+[theme]
+# Color theme name (default: tokyo-night)
+name = "tokyo-night"
+
+[logging]
+# Log level: "debug", "info", "warn", "error" (default: info)
+level = "info"

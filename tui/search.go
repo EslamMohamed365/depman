@@ -96,7 +96,7 @@ func (s SearchModel) updateInput(msg tea.KeyMsg, state *AppState) (SearchModel, 
 		state.Screen = ScreenDashboard
 		return NewSearchModel(), nil
 	case "enter":
-		if len(s.input) >= 1 {
+		if len(s.input) >= MinSearchLength {
 			s.loading = true
 			return s, s.doSearch(state)
 		}
@@ -192,10 +192,10 @@ func (s SearchModel) View(state AppState) string {
 	w := state.Width
 	h := state.Height
 	if w == 0 {
-		w = 80
+		w = DefaultWidth
 	}
 	if h == 0 {
-		h = 24
+		h = DefaultHeight
 	}
 
 	container := lipgloss.NewStyle().
@@ -260,9 +260,9 @@ func (s SearchModel) viewResults(w, h int) string {
 		b.WriteString(dimStyle.Render("  No packages found"))
 		b.WriteString("\n")
 	} else {
-		maxVisible := h - 8
-		if maxVisible < 3 {
-			maxVisible = 3
+		maxVisible := h - ViewportHeaderLines
+		if maxVisible < MinVisibleResults {
+			maxVisible = MinVisibleResults
 		}
 		visible := min(len(s.results), maxVisible)
 
@@ -272,8 +272,8 @@ func (s SearchModel) viewResults(w, h int) string {
 			ver := lipgloss.NewStyle().Foreground(config.ColorCyan).Render("v" + r.Version)
 
 			descMaxLen := w - 10
-			if descMaxLen < 20 {
-				descMaxLen = 20
+		if descMaxLen < MinDescriptionLength {
+				descMaxLen = MinDescriptionLength
 			}
 			desc := dimStyle.Render(truncate(r.Description, descMaxLen))
 
@@ -303,7 +303,7 @@ func (s SearchModel) viewDetail(w, h int) string {
 	d := s.detail
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(config.ColorPurple)
-	labelStyle := lipgloss.NewStyle().Foreground(config.ColorFGDim).Width(14)
+		labelStyle := lipgloss.NewStyle().Foreground(config.ColorFGDim).Width(KeyColumnWidth)
 	valueStyle := lipgloss.NewStyle().Foreground(config.ColorFG)
 	verStyle := lipgloss.NewStyle().Foreground(config.ColorCyan)
 	dimStyle := lipgloss.NewStyle().Foreground(config.ColorFGDim)
@@ -320,8 +320,8 @@ func (s SearchModel) viewDetail(w, h int) string {
 	// Info fields
 	if d.Summary != "" {
 		descMaxLen := w - 20
-		if descMaxLen < 30 {
-			descMaxLen = 30
+		if descMaxLen < MinDescWidth {
+			descMaxLen = MinDescWidth
 		}
 		b.WriteString(labelStyle.Render("Description"))
 		b.WriteString(valueStyle.Render(truncate(d.Summary, descMaxLen)))
@@ -353,9 +353,9 @@ func (s SearchModel) viewDetail(w, h int) string {
 	b.WriteString(sectionStyle.Render("Select Version"))
 	b.WriteString("\n\n")
 
-	maxVersions := h - 16
-	if maxVersions < 3 {
-		maxVersions = 3
+	maxVersions := h - MaxVersionsDisplay
+	if maxVersions < MinVisibleResults {
+		maxVersions = MinVisibleResults
 	}
 	visible := min(len(d.Versions), maxVersions)
 

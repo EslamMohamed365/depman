@@ -5,6 +5,7 @@ import (
 	"github.com/eslam/depman/config"
 	"github.com/eslam/depman/pkg/detector"
 	"github.com/eslam/depman/pkg/env"
+	"github.com/eslam/depman/pkg/log"
 	"github.com/eslam/depman/pkg/pip"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -49,7 +50,10 @@ type AppState struct {
 func NewAppState(project detector.Project, venv env.Virtualenv, mgr env.PackageManager, cfg config.Config) AppState {
 	screen := ScreenDashboard
 	if !project.Detected() {
+		log.Debug("no project detected, showing init screen")
 		screen = ScreenInit
+	} else {
+		log.Debug("project detected", "file_type", project.FileType.String(), "path", project.FilePath)
 	}
 
 	return AppState{
@@ -110,6 +114,7 @@ type StatusNotification struct {
 // -- Tea interface --
 
 func (m Model) Init() tea.Cmd {
+	log.Debug("tui initialized", "screen", m.state.Screen)
 	if m.state.Screen == ScreenDashboard {
 		return m.loadPackages()
 	}
@@ -135,12 +140,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				if m.state.Screen == ScreenDashboard {
 					m.state.Screen = ScreenHelp
+			log.Debug("screen changed", "from", m.state.Screen, "to", ScreenHelp)
 					return m, nil
 				}
 			case "esc":
 				switch m.state.Screen {
 				case ScreenHelp:
 					m.state.Screen = ScreenDashboard
+				log.Debug("screen changed", "from", ScreenHelp, "to", ScreenDashboard)
 					return m, nil
 				}
 			}
@@ -156,8 +163,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PackagesLoadedMsg:
 		m.state.IsLoading = false
+		log.Debug("packages loaded", "installed", len(msg.Installed), "outdated", len(msg.Outdated))
 		if msg.Err != nil {
-			m.state.StatusMsg = "Error loading packages: " + msg.Err.Error()
+			m.state.StatusMsg = "Failed to load packages: " + msg.Err.Error()
 		} else {
 			m.state.Installed = msg.Installed
 			m.state.Outdated = msg.Outdated
@@ -167,8 +175,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PackageActionMsg:
 		m.state.IsLoading = false
+		log.Debug("package action completed", "action", msg.Action, "package", msg.Package, "success", msg.Err == nil)
 		if msg.Err != nil {
-			m.state.StatusMsg = "Error: " + msg.Err.Error()
+			m.state.StatusMsg = "Failed: " + msg.Err.Error()
 		} else {
 			m.state.StatusMsg = msg.Action + " " + msg.Package + " ✓"
 			return m, m.loadPackages()
@@ -180,6 +189,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.initView, _ = m.initView.Update(msg, &m.state)
 		if m.state.Screen == ScreenDashboard {
 			// Project was created, reload runner and load packages
+		log.Debug("project created, switching to dashboard", "manager", m.state.Manager, "venv", m.state.Venv.Path)
 			m.runner = pip.NewRunner(m.state.Manager, m.state.Venv)
 			return m, m.loadPackages()
 		}
@@ -207,6 +217,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// If VersionChangePkg is set, auto-fetch detail for that package
 		if m.state.VersionChangePkg != "" {
 			pkgName := m.state.VersionChangePkg
+			log.Debug("version change requested", "package", pkgName)
 			m.state.VersionChangePkg = "" // consume it
 			m.search = SearchModel{
 				phase:         PhaseInput,
@@ -258,7 +269,7 @@ func (m Model) loadPackages() tea.Cmd {
 		}
 		outdated, err := pip.ParseOutdatedList(outdatedResult.Stdout)
 		if err != nil {
-			return PackagesLoadedMsg{Err: fmt.Errorf("parsing outdated list: %w", err)}
+			return PackagesLoadedMsg{Err: fmt.Errorf("pip: parse outdated list: %w", err)}
 		}
 
 		return PackagesLoadedMsg{Installed: installed, Outdated: outdated}

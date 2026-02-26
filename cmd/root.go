@@ -7,6 +7,7 @@ import (
 	"github.com/eslam/depman/config"
 	"github.com/eslam/depman/pkg/detector"
 	"github.com/eslam/depman/pkg/env"
+	"github.com/eslam/depman/pkg/log"
 	"github.com/eslam/depman/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -22,6 +23,10 @@ func Execute() error {
 		cfg = config.DefaultConfig()
 	}
 
+	// Initialize logger with configured log level
+	log.Init(cfg.LogLevel)
+	log.Info("depman starting", "log_level", cfg.LogLevel)
+
 	// Detect project dependency file
 	project := detector.DetectProject(".")
 
@@ -30,7 +35,6 @@ func Execute() error {
 
 	// Detect package manager
 	mgr := env.DetectPackageManager(cfg.PackageManager.Preferred)
-
 	// Build initial app state
 	state := tui.NewAppState(project, venv, mgr, cfg)
 
@@ -38,7 +42,7 @@ func Execute() error {
 	p := tea.NewProgram(tui.NewModel(state), tea.WithAltScreen())
 	m, err := p.Run()
 	if err != nil {
-		return fmt.Errorf("failed to run TUI: %w", err)
+		return fmt.Errorf("tui: program failed: %w", err)
 	}
 
 	// Check for any exit error from the model

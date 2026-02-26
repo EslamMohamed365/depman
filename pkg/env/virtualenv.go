@@ -14,6 +14,9 @@ const (
 	EnvVirtualenv
 	EnvSystem
 )
+const (
+	FilePermExecutable = 0111
+)
 
 // Virtualenv holds information about the detected Python environment.
 type Virtualenv struct {
@@ -120,5 +123,5 @@ func fileExecutable(path string) bool {
 	if err != nil {
 		return false
 	}
-	return info.Mode()&0111 != 0
+	return info.Mode()&FilePermExecutable != 0
 }
