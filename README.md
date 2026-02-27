@@ -26,6 +26,13 @@ Managing Python dependencies often feels like a context-switching marathon. You'
 - **Real-time Search** - Search PyPI with live results and package descriptions
 - **Tokyo Night Theme** - A beautiful, eye-friendly dark theme out of the box
 
+
+## Prerequisites
+
+- Python 3.8+ with a virtual environment (venv, uv venv, or poetry)
+- Optional: [uv](https://github.com/astral-sh/uv) for faster package operations (recommended)
+- Optional: [go](https://go.dev/) 1.25+ (only if building from source)
+
 ## Installation
 
 ### Binary (Recommended)
