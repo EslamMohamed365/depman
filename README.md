@@ -277,9 +277,17 @@ go fmt ./...
 
 ## Tech Stack
 
-- **Framework**: [Bubble Tea](https://github.com/charmbracelet/bubbletea)
-- **Styling**: [Lip Gloss](https://github.com/charmbracelet/lipgloss)
-- **Language**: [Go](https://go.dev/)
+- **TUI Framework**: [Bubble Tea](https://github.com/charmbracelet/bubbletea) - Interactive CLI framework
+- **Styling**: [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Style definition library
+- **Language**: [Go](https://go.dev/) - 1.25+ required
+- **Config**: [go-toml](https://github.com/pelletier/go-toml) - TOML parsing
+- **Python API**: [PyPI](https://pypi.org) - Package metadata and search
+
+### Dependencies
+
+- `charmbracelet/bubbletea` - TUI framework
+- `charmbracelet/lipgloss` - Terminal styling
+- `pelletier/go-toml` - Configuration parsing
 
 ## Contributing
 
