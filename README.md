@@ -176,6 +176,72 @@ source .venv/bin/activate
 depman
 ```
 
+## FAQ & Troubleshooting
+
+<details>
+<summary>"No Python project found" error</summary>
+
+Make sure you're running `depman` from a directory containing:
+- `pyproject.toml`
+- `requirements.txt`
+- `setup.py`
+- Or activate a virtual environment with `source .venv/bin/activate`
+
+</details>
+
+<details>
+<summary>How do I use a custom PyPI mirror?</summary>
+
+Add to your `~/.config/depman/config.toml`:
+
+```toml
+[pypi]
+mirror = "https://pypi.tuna.tsinghua.edu.cn/simple"
+```
+
+</details>
+
+<details>
+<summary>How do I switch between pip and uv?</summary>
+
+Update your config:
+
+```toml
+[package_manager]
+preferred = "pip"  # or "uv"
+```
+
+Or leave empty for auto-detection (uv is preferred if available).
+
+</details>
+
+<details>
+<summary>depman is slow with large projects</summary>
+
+- Use `uv` instead of `pip` for much faster operations
+- Enable debug logging to see operation timing: `log_level = "debug"`
+- Consider pinning critical dependencies to reduce update checks
+
+</details>
+
+<details>
+<summary>Keyboard shortcuts not working</summary>
+
+Make sure you're in Normal mode (not Insert mode). Press `Esc` to return to Normal mode.
+
+</details>
+
+<details>
+<summary>How do I contribute to depman?</summary>
+
+See the [Contributing](#contributing) section below. We welcome:
+- Bug reports
+- Feature requests
+- Pull requests
+- Documentation improvements
+
+</details>
+
 ## Development
 
 ### Prerequisites
