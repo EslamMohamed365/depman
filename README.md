@@ -26,6 +26,13 @@ Managing Python dependencies often feels like a context-switching marathon. You'
 - **Real-time Search** - Search PyPI with live results and package descriptions
 - **Tokyo Night Theme** - A beautiful, eye-friendly dark theme out of the box
 
+
+## Prerequisites
+
+- Python 3.8+ with a virtual environment (venv, uv venv, or poetry)
+- Optional: [uv](https://github.com/astral-sh/uv) for faster package operations (recommended)
+- Optional: [go](https://go.dev/) 1.25+ (only if building from source)
+
 ## Installation
 
 ### Binary (Recommended)
@@ -52,8 +59,12 @@ sudo mv depman /usr/local/bin/
 ### Homebrew (macOS / Linux)
 
 ```bash
-# Install via Homebrew
+# Tap the repository (if available)
+brew tap eslam/depman
 brew install depman
+
+# Or install from source
+brew install --build-from-source depman
 ```
 
 ### AUR (Arch Linux)
@@ -96,34 +107,171 @@ If no project is found, `depman` will help you initialize one.
 
 ## Keybindings
 
+<details>
+<summary><strong>Navigation</strong> (click to expand)</summary>
+
 | Key | Action |
 |-----|--------|
-| `j` / `down` | Move down |
-| `k` / `up` | Move up |
+| `j` / `↓` | Move down |
+| `k` / `↑` | Move up |
 | `g` | Go to first item |
 | `G` | Go to last item |
 | `Ctrl+d` | Page down |
 | `Ctrl+u` | Page up |
+| `Tab` | Switch between panels |
+
+</details>
+
+<details>
+<summary><strong>Package Operations</strong> (click to expand)</summary>
+
+| Key | Action |
+|-----|--------|
 | `a` | Add a new package |
 | `d` / `x` | Remove selected package |
 | `u` | Update selected package |
 | `U` | Update all outdated packages |
+
+</details>
+
+<details>
+<summary><strong>Search & Help</strong> (click to expand)</summary>
+
+| Key | Action |
+|-----|--------|
 | `/` / `s` | Search PyPI online |
-| `Tab` | Switch between panels |
 | `?` | Show help menu |
 | `q` / `Esc` | Quit |
 
+</details>
+
 ## Configuration
 
-`depman` looks for a configuration file at `~/.config/depman/config.toml`.
+`depman` looks for a configuration file at `~/.config/depman/config.toml` (or `$XDG_CONFIG_HOME/depman/config.toml` if set).
+
+### Configuration Options
 
 ```toml
-# Preferred package manager: "uv" or "pip"
+# Preferred package manager: "uv", "pip", "pip3", or "" (auto-detect)
 package_manager = "uv"
+
+# PyPI mirror (useful for offline/locked environments)
+# pypi = "https://pypi.org"
+
+# Theme (currently only "tokyo-night" is available)
+# theme = "tokyo-night"
 
 # Log level: "debug", "info", "warn", "error"
 log_level = "info"
 ```
+
+### Full Configuration Example
+
+```toml
+[package_manager]
+preferred = "uv"  # "uv", "pip", "pip3", or "" (auto-detect)
+
+[pypi]
+mirror = "https://pypi.org"  # Alternative PyPI mirror
+
+[theme]
+name = "tokyo-night"  # Theme name
+
+log_level = "info"  # "debug", "info", "warn", "error"
+```
+
+### Config File Location
+
+| Environment | Path |
+|-------------|------|
+| Default | `~/.config/depman/config.toml` |
+| Custom XDG | `$XDG_CONFIG_HOME/depman/config.toml` |
+| Windows | `%APPDATA%\depman\config.toml` |
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `XDG_CONFIG_HOME` | Base directory for config files | `~/.config` |
+| `VIRTUAL_ENV` | Python virtual environment path | Auto-detected from project |
+
+### Examples
+
+```bash
+# Use custom config directory
+export XDG_CONFIG_HOME=/etc/config
+depman
+
+# With virtual environment activated (auto-detected)
+source .venv/bin/activate
+depman
+```
+
+## FAQ & Troubleshooting
+
+<details>
+<summary>"No Python project found" error</summary>
+
+Make sure you're running `depman` from a directory containing:
+- `pyproject.toml`
+- `requirements.txt`
+- `setup.py`
+- Or activate a virtual environment with `source .venv/bin/activate`
+
+</details>
+
+<details>
+<summary>How do I use a custom PyPI mirror?</summary>
+
+Add to your `~/.config/depman/config.toml`:
+
+```toml
+[pypi]
+mirror = "https://pypi.tuna.tsinghua.edu.cn/simple"
+```
+
+</details>
+
+<details>
+<summary>How do I switch between pip and uv?</summary>
+
+Update your config:
+
+```toml
+[package_manager]
+preferred = "pip"  # or "uv"
+```
+
+Or leave empty for auto-detection (uv is preferred if available).
+
+</details>
+
+<details>
+<summary>depman is slow with large projects</summary>
+
+- Use `uv` instead of `pip` for much faster operations
+- Enable debug logging to see operation timing: `log_level = "debug"`
+- Consider pinning critical dependencies to reduce update checks
+
+</details>
+
+<details>
+<summary>Keyboard shortcuts not working</summary>
+
+Make sure you're in Normal mode (not Insert mode). Press `Esc` to return to Normal mode.
+
+</details>
+
+<details>
+<summary>How do I contribute to depman?</summary>
+
+See the [Contributing](#contributing) section below. We welcome:
+- Bug reports
+- Feature requests
+- Pull requests
+- Documentation improvements
+
+</details>
 
 ## Development
 
@@ -160,9 +308,17 @@ go fmt ./...
 
 ## Tech Stack
 
-- **Framework**: [Bubble Tea](https://github.com/charmbracelet/bubbletea)
-- **Styling**: [Lip Gloss](https://github.com/charmbracelet/lipgloss)
-- **Language**: [Go](https://go.dev/)
+- **TUI Framework**: [Bubble Tea](https://github.com/charmbracelet/bubbletea) - Interactive CLI framework
+- **Styling**: [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Style definition library
+- **Language**: [Go](https://go.dev/) - 1.25+ required
+- **Config**: [go-toml](https://github.com/pelletier/go-toml) - TOML parsing
+- **Python API**: [PyPI](https://pypi.org) - Package metadata and search
+
+### Dependencies
+
+- `charmbracelet/bubbletea` - TUI framework
+- `charmbracelet/lipgloss` - Terminal styling
+- `pelletier/go-toml` - Configuration parsing
 
 ## Contributing
 
@@ -178,12 +334,14 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## Roadmap
 
-- [ ] Package version pinning support
-- [ ] Requirements.txt editor
-- [ ] Virtual environment creation/deletion
-- [ ] Dependency tree visualization
-- [ ] Audit security vulnerabilities
-- [ ] Multi-language support (npm, cargo, gem) - Support package managers for other languages
+- [ ] **Package version pinning support** - Lock specific versions to ensure reproducible builds
+- [ ] **Requirements.txt editor** - Visual editor for requirements.txt files with validation
+- [ ] **Virtual environment creation/deletion** - Create and manage venvs directly from the UI
+- [ ] **Dependency tree visualization** - Visual graph showing package relationships and conflicts
+- [ ] **Audit security vulnerabilities** - Integrate with PyUP or similar to highlight vulnerable packages
+- [ ] **Multi-language support** - Support package managers for other languages (npm, cargo, gem, etc.)
+- [ ] **Plugin system** - Extensible architecture for custom commands and integrations
+- [ ] **Theme customization** - More built-in themes and custom theme support
 
 ## License
 
