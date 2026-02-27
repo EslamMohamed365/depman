@@ -147,15 +147,46 @@ If no project is found, `depman` will help you initialize one.
 
 ## Configuration
 
-`depman` looks for a configuration file at `~/.config/depman/config.toml`.
+`depman` looks for a configuration file at `~/.config/depman/config.toml` (or `$XDG_CONFIG_HOME/depman/config.toml` if set).
+
+### Configuration Options
 
 ```toml
-# Preferred package manager: "uv" or "pip"
+# Preferred package manager: "uv", "pip", "pip3", or "" (auto-detect)
 package_manager = "uv"
+
+# PyPI mirror (useful for offline/locked environments)
+# pypi = "https://pypi.org"
+
+# Theme (currently only "tokyo-night" is available)
+# theme = "tokyo-night"
 
 # Log level: "debug", "info", "warn", "error"
 log_level = "info"
 ```
+
+### Full Configuration Example
+
+```toml
+[package_manager]
+preferred = "uv"  # "uv", "pip", "pip3", or "" (auto-detect)
+
+[pypi]
+mirror = "https://pypi.org"  # Alternative PyPI mirror
+
+[theme]
+name = "tokyo-night"  # Theme name
+
+log_level = "info"  # "debug", "info", "warn", "error"
+```
+
+### Config File Location
+
+| Environment | Path |
+|-------------|------|
+| Default | `~/.config/depman/config.toml` |
+| Custom XDG | `$XDG_CONFIG_HOME/depman/config.toml` |
+| Windows | `%APPDATA%\depman\config.toml` |
 
 ## Environment Variables
 
