@@ -157,6 +157,25 @@ package_manager = "uv"
 log_level = "info"
 ```
 
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `XDG_CONFIG_HOME` | Base directory for config files | `~/.config` |
+| `VIRTUAL_ENV` | Python virtual environment path | Auto-detected from project |
+
+### Examples
+
+```bash
+# Use custom config directory
+export XDG_CONFIG_HOME=/etc/config
+depman
+
+# With virtual environment activated (auto-detected)
+source .venv/bin/activate
+depman
+```
+
 ## Development
 
 ### Prerequisites
