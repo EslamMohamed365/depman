@@ -100,22 +100,43 @@ If no project is found, `depman` will help you initialize one.
 
 ## Keybindings
 
+<details>
+<summary><strong>Navigation</strong> (click to expand)</summary>
+
 | Key | Action |
 |-----|--------|
-| `j` / `down` | Move down |
-| `k` / `up` | Move up |
+| `j` / `↓` | Move down |
+| `k` / `↑` | Move up |
 | `g` | Go to first item |
 | `G` | Go to last item |
 | `Ctrl+d` | Page down |
 | `Ctrl+u` | Page up |
+| `Tab` | Switch between panels |
+
+</details>
+
+<details>
+<summary><strong>Package Operations</strong> (click to expand)</summary>
+
+| Key | Action |
+|-----|--------|
 | `a` | Add a new package |
 | `d` / `x` | Remove selected package |
 | `u` | Update selected package |
 | `U` | Update all outdated packages |
+
+</details>
+
+<details>
+<summary><strong>Search & Help</strong> (click to expand)</summary>
+
+| Key | Action |
+|-----|--------|
 | `/` / `s` | Search PyPI online |
-| `Tab` | Switch between panels |
 | `?` | Show help menu |
 | `q` / `Esc` | Quit |
+
+</details>
 
 ## Configuration
 
