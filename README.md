@@ -49,6 +49,13 @@ chmod +x depman
 sudo mv depman /usr/local/bin/
 ```
 
+### Homebrew (macOS / Linux)
+
+```bash
+# Install via Homebrew
+brew install depman
+```
+
 ### From Source
 
 Requires [Go](https://go.dev/) 1.25 or later.
