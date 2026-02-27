@@ -41,10 +41,10 @@ sudo mv depman /usr/local/bin/
 # macOS (Apple Silicon)
 curl -L -o depman https://github.com/eslam/depman/releases/latest/download/depman-darwin-arm64
 chmod +x depman
-sudo mv depman /usr macOS (Intel)
-curl -L/local/bin/
+sudo mv depman /usr/local/bin/
 
-# -o depman https://github.com/eslam/depman/releases/latest/download/depman-darwin-amd64
+# macOS (Intel)
+curl -L -o depman https://github.com/eslam/depman/releases/latest/download/depman-darwin-amd64
 chmod +x depman
 sudo mv depman /usr/local/bin/
 ```
