@@ -29,3 +29,6 @@ venv/
 # OpenCode (tool artifacts)
 .agent/
 .sisyphus/
+
+# Git worktrees
+.worktrees/
