@@ -60,6 +60,18 @@ brew install depman
 brew install --build-from-source depman
 ```
 
+### AUR (Arch Linux)
+
+Using your favorite AUR helper (yay, paru, etc.):
+
+```bash
+# Using yay
+yay -S depman
+
+# Using paru
+paru -S depman
+```
+
 ### From Source
 
 Requires [Go](https://go.dev/) 1.25 or later.
