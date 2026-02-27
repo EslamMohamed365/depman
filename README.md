@@ -229,12 +229,14 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## Roadmap
 
-- [ ] Package version pinning support
-- [ ] Requirements.txt editor
-- [ ] Virtual environment creation/deletion
-- [ ] Dependency tree visualization
-- [ ] Audit security vulnerabilities
-- [ ] Multi-language support (npm, cargo, gem) - Support package managers for other languages
+- [ ] **Package version pinning support** - Lock specific versions to ensure reproducible builds
+- [ ] **Requirements.txt editor** - Visual editor for requirements.txt files with validation
+- [ ] **Virtual environment creation/deletion** - Create and manage venvs directly from the UI
+- [ ] **Dependency tree visualization** - Visual graph showing package relationships and conflicts
+- [ ] **Audit security vulnerabilities** - Integrate with PyUP or similar to highlight vulnerable packages
+- [ ] **Multi-language support** - Support package managers for other languages (npm, cargo, gem, etc.)
+- [ ] **Plugin system** - Extensible architecture for custom commands and integrations
+- [ ] **Theme customization** - More built-in themes and custom theme support
 
 ## License
 
